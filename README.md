@@ -2,8 +2,8 @@
 
 <div align="center">
   <!-- Header section with AI-themed design and purple accent -->
-  <div style="background-color: #B186D6; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&duration=2800&pause=2000&color=B186D6&center=true&vCenter=true&width=940&lines=欢迎访问我的GitHub个人资料页面！;开源爱好者和编程探索者" alt="Typing SVG" />
+  <div style >
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&duration=2800&pause=2000&color=B186D6&center=true&vCenter=true&width=940&lines=欢迎访问我的GitHub个人资料页面！;开源爱好者和AI编程探索者" />
   </div>
 
   <!-- Profile views counter with purple theme -->
@@ -11,7 +11,7 @@
   
   <!-- AI-themed separator -->
   <div style="margin: 20px 0;">
-    <img src="https://capsule-render.vercel.app/api?type=waving&color=B186D6&height=120&section=header&text=AI%20爱好者&fontSize=50&fontColor=FFFFFF&animation=fadeIn&fontAlignY=30" alt="Header Wave" width="100%" />
+    <img src="https://capsule-render.vercel.app/api?type=waving&color=B186D6&height=120&section=header&fontSize=50&fontColor=FFFFFF&animation=fadeIn&fontAlignY=30" alt="Header Wave" width="100%" />
   </div>
 
   <!-- GitHub Stats with purple theme -->
@@ -26,31 +26,6 @@
   <!-- AI-themed contribution graph -->
   <img width="90%" src="https://github-readme-activity-graph.vercel.app/graph?username=hotianbexuanto&bg_color=0D1117&color=B186D6&line=B186D6&point=FFFFFF&area=true&area_color=B186D6&hide_border=true" alt="Contribution Graph" />
 
-  <!-- Skills and technologies section with AI decoration -->
-  <div style="margin: 20px 0;">
-    <img src="https://capsule-render.vercel.app/api?type=rect&color=B186D6&height=3&section=header" width="90%" alt="Divider" />
-    <h2 style="color: #B186D6;">技术栈 & 工具</h2>
-    <div style="background-color: #0D1117; padding: 20px; border-radius: 10px; border: 1px solid #B186D6;">
-      <!-- Languages -->
-      <h3 style="color: #B186D6;">编程语言</h3>
-      <p>
-        <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white&color=B186D6" alt="Python" />
-        <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=white&color=B186D6" alt="JavaScript" />
-        <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white&color=B186D6" alt="HTML5" />
-        <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white&color=B186D6" alt="CSS3" />
-      </p>
-      
-      <!-- Tools and Frameworks -->
-      <h3 style="color: #B186D6;">框架 & 工具</h3>
-      <p>
-        <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=white&color=B186D6" alt="React" />
-        <img src="https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white&color=B186D6" alt="TensorFlow" />
-        <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white&color=B186D6" alt="Git" />
-        <img src="https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white&color=B186D6" alt="VS Code" />
-      </p>
-    </div>
-  </div>
-
   <!-- AI-animated trophies section -->
   <div style="margin: 20px 0;">
     <h2 style="color: #B186D6;">GitHub 成就</h2>
@@ -64,6 +39,6 @@
 
   <!-- Footer with animated text -->
   <div style="margin-top: 20px;">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&duration=2000&pause=1000&color=B186D6&center=true&vCenter=true&width=435&lines=感谢您访问我的个人资料！;一起探索AI和编程的无限可能吧！" alt="Footer Typing" />
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&duration=2000&pause=1000&color=B186D6&center=true&vCenter=true&width=435&lines=感谢您访问我的个人资料！;一起探索AI和编程的无限可能吧！" />
   </div>
 </div> 
