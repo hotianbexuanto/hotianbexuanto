@@ -1,5 +1,3 @@
-# hotianbexuanto
-
 <div align="center">
   <!-- Profile views counter with purple theme -->
   <img src="https://komarev.com/ghpvc/?username=hotianbexuanto&color=B186D6&style=for-the-badge" alt="Profile Views" />
