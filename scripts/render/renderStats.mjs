@@ -1,87 +1,191 @@
 import { colors, shape, spacing, cardWidth, fontFamily } from './tokens.mjs';
 
-// Icons (Material Symbols style paths)
-const icons = {
-  star: 'M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z',
-  commit: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z',
-  pr: 'M7 3a2 2 0 0 0-2 2v9.17a3.001 3.001 0 1 0 2 0V5h4v2.17a3.001 3.001 0 1 0 2 0V5h2v9.17a3.001 3.001 0 1 0 2 0V5a2 2 0 0 0-2-2H7z',
-  issue: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
-  repo: 'M3 2.75A2.75 2.75 0 015.75 0h14.5a.75.75 0 01.75.75v20.5a.75.75 0 01-.75.75h-6a.75.75 0 010-1.5h5.25v-4H6A1.5 1.5 0 004.5 18v.75c0 .716.43 1.334 1.05 1.605a.75.75 0 01-.6 1.374A3.25 3.25 0 013 18.75V2.75z',
-  followers: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
-};
-
-function statRow(label, value, iconPath) {
-  return {
-    type: 'div',
-    props: {
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-      },
-      children: [
-        {
-          type: 'svg',
-          props: {
-            width: 14,
-            height: 14,
-            viewBox: '0 0 24 24',
-            fill: colors.primary,
-            children: {
-              type: 'path',
-              props: { d: iconPath },
-            },
-          },
-        },
-        {
-          type: 'span',
-          props: {
-            style: { fontSize: '10px', color: colors.onSurfaceMuted, flex: 1 },
-            children: label,
-          },
-        },
-        {
-          type: 'span',
-          props: {
-            style: { fontSize: '13px', fontWeight: 700, color: colors.onSurface },
-            children: String(value),
-          },
-        },
-      ],
-    },
-  };
-}
-
 /**
  * Render Stats Card - quarter width (194 x 260)
+ * Multi-line chart showing weekly Commits, PRs, Issues
+ * Plus compact summary for Stars, Repos, Followers
  */
-export function renderStats(data, buildTime) {
+export function renderStats(data, weeklyStats, buildTime) {
+  const { commits, prs, issues, labels } = weeklyStats;
+  const numPoints = commits.length;
+
+  // Chart dimensions
+  const chartW = 158;
+  const chartH = 90;
+  const padTop = 4;
+
+  // Series definitions
+  const series = [
+    { data: commits, color: colors.primary, label: 'Commits' },
+    { data: prs, color: colors.success, label: 'PRs' },
+    { data: issues, color: colors.warning, label: 'Issues' },
+  ];
+
+  // Y-axis scale
+  const allValues = [...commits, ...prs, ...issues];
+  const maxVal = Math.max(...allValues, 1);
+
+  // Convert data points to chart coordinates
+  function toCoords(values) {
+    return values.map((v, i) => ({
+      x: (i / (numPoints - 1)) * chartW,
+      y: padTop + (chartH - padTop) - (v / maxVal) * (chartH - padTop),
+    }));
+  }
+
+  // Build SVG children
+  const svgChildren = [];
+
+  // Horizontal grid lines (4 lines)
+  for (let i = 0; i <= 4; i++) {
+    const y = padTop + ((chartH - padTop) / 4) * i;
+    svgChildren.push({
+      type: 'line',
+      props: { x1: 0, y1: y, x2: chartW, y2: y, stroke: colors.surfaceBorder, strokeWidth: 0.5 },
+    });
+  }
+
+  // Draw each series (area fill + line + end dot)
+  for (const s of series) {
+    const coords = toCoords(s.data);
+    const pointsStr = coords.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+    // Semi-transparent area fill
+    const areaD = `M${coords[0].x},${chartH} `
+      + coords.map(p => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+      + ` L${coords[coords.length - 1].x},${chartH} Z`;
+    svgChildren.push({
+      type: 'path',
+      props: { d: areaD, fill: s.color, opacity: 0.1 },
+    });
+
+    // Line
+    svgChildren.push({
+      type: 'polyline',
+      props: {
+        points: pointsStr,
+        fill: 'none',
+        stroke: s.color,
+        strokeWidth: 1.5,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+      },
+    });
+
+    // End point dot
+    const last = coords[coords.length - 1];
+    svgChildren.push({
+      type: 'circle',
+      props: { cx: last.x, cy: last.y, r: 2.5, fill: s.color },
+    });
+  }
+
+  // Legend item
+  function legendItem(label, color, total) {
+    return {
+      type: 'div',
+      props: {
+        style: { display: 'flex', alignItems: 'center', gap: '3px' },
+        children: [
+          {
+            type: 'div',
+            props: {
+              style: {
+                width: '6px', height: '6px', borderRadius: '50%',
+                backgroundColor: color, flexShrink: 0,
+              },
+              children: '',
+            },
+          },
+          {
+            type: 'span',
+            props: {
+              style: { fontSize: '9px', color: colors.onSurfaceMuted },
+              children: `${label} ${total}`,
+            },
+          },
+        ],
+      },
+    };
+  }
+
+  // Compact summary row
+  function summaryRow(label, value) {
+    return {
+      type: 'div',
+      props: {
+        style: { display: 'flex', alignItems: 'center', gap: '4px' },
+        children: [
+          {
+            type: 'span',
+            props: {
+              style: { fontSize: '10px', color: colors.onSurfaceMuted, flex: 1 },
+              children: label,
+            },
+          },
+          {
+            type: 'span',
+            props: {
+              style: { fontSize: '12px', fontWeight: 700, color: colors.onSurface },
+              children: String(value),
+            },
+          },
+        ],
+      },
+    };
+  }
+
   const children = [
     // Title
     {
       type: 'span',
       props: {
-        style: { fontSize: '12px', fontWeight: 600, color: colors.onSurfaceVariant, marginBottom: '8px' },
+        style: { fontSize: '12px', fontWeight: 600, color: colors.onSurfaceVariant, marginBottom: '4px' },
         children: 'GitHub Stats',
       },
     },
-    // Stats list
+    // Line chart
+    {
+      type: 'svg',
+      props: {
+        width: chartW,
+        height: chartH,
+        viewBox: `0 0 ${chartW} ${chartH}`,
+        children: svgChildren,
+      },
+    },
+    // Legend row
     {
       type: 'div',
       props: {
         style: {
           display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          flex: 1,
+          justifyContent: 'space-between',
+          marginTop: '4px',
+          marginBottom: '6px',
         },
+        children: series.map(s =>
+          legendItem(s.label, s.color, s.data.reduce((a, b) => a + b, 0))
+        ),
+      },
+    },
+    // Divider
+    {
+      type: 'div',
+      props: {
+        style: { width: '100%', height: '1px', backgroundColor: colors.surfaceBorder, marginBottom: '6px' },
+        children: '',
+      },
+    },
+    // Summary stats
+    {
+      type: 'div',
+      props: {
+        style: { display: 'flex', flexDirection: 'column', gap: '3px' },
         children: [
-          statRow('Stars', data.totalStars, icons.star),
-          statRow('Commits', data.totalCommits, icons.commit),
-          statRow('PRs', data.totalPRs, icons.pr),
-          statRow('Issues', data.totalIssues, icons.issue),
-          statRow('Repos', data.repos || 0, icons.repo),
-          statRow('Followers', data.followers || 0, icons.followers),
+          summaryRow('Stars', data.totalStars),
+          summaryRow('Repos', data.repos || 0),
+          summaryRow('Followers', data.followers || 0),
         ],
       },
     },
