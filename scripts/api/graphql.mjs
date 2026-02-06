@@ -161,12 +161,14 @@ export async function fetchContributions(login) {
 
   // Last 30 days for graph
   const last30 = days.slice(-30).map(d => d.contributionCount);
+  const last30Dates = days.slice(-30).map(d => d.date);
 
   return {
     currentStreak,
     longestStreak,
     totalContributions: days.reduce((s, d) => s + d.contributionCount, 0),
     last30Days: last30,
+    last30Dates,
   };
 }
 

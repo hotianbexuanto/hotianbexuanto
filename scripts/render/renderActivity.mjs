@@ -102,7 +102,7 @@ export function renderActivity(activities, buildTime) {
     children.push({
       type: 'span',
       props: {
-        style: { fontSize: '8px', color: colors.onSurfaceMuted, textAlign: 'right', marginTop: '4px' },
+        style: { fontSize: '8px', color: colors.onSurfaceMuted, textAlign: 'right', marginTop: 'auto' },
         children: `Updated: ${buildTime}`,
       },
     });

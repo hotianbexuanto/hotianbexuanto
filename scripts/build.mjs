@@ -96,8 +96,10 @@ async function main() {
   // Load fonts
   const fonts = await loadFont();
 
-  // Build timestamp
-  const buildTime = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  // Build timestamp (Beijing Time, UTC+8)
+  const now = new Date();
+  const beijing = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const buildTime = beijing.toISOString().replace('T', ' ').slice(0, 16) + ' CST';
 
   // Fetch data (with error handling)
   let stats, languages, contributions, activity, timeDistribution;
@@ -135,6 +137,11 @@ async function main() {
       longestStreak: 0,
       totalContributions: 0,
       last30Days: new Array(30).fill(0),
+      last30Dates: new Array(30).fill(0).map((_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - 29 + i);
+        return d.toISOString().slice(0, 10);
+      }),
     };
     activity = [];
     timeDistribution = new Array(24).fill(0);
@@ -155,7 +162,7 @@ async function main() {
     { name: 'streak.svg', element: renderStreak(contributions, buildTime), width: 194, height: 260 },
     { name: 'activity.svg', element: renderActivity(activity, buildTime), width: 194, height: 260 },
     { name: 'timedist.svg', element: renderTimeDistribution(timeDistribution, buildTime), width: 390, height: 260 },
-    { name: 'contributions.svg', element: renderContributions(contributions, buildTime), width: 800, height: 220 },
+    { name: 'contributions.svg', element: renderContributions(contributions, buildTime), width: 390, height: 260 },
   ];
 
   for (const card of cards) {
