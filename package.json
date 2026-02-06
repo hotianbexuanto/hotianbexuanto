@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@octokit/graphql": "^8.1.1",
+    "adm-zip": "^0.5.16",
     "satori": "^0.12.0"
   }
 }

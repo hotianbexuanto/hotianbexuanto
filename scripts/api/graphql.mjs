@@ -248,3 +248,45 @@ export async function fetchRecentActivity(login) {
   // Sort by most recent and return top 4
   return activities.sort((a, b) => b.timestamp - a.timestamp).slice(0, 4);
 }
+
+/**
+ * Fetch commit time distribution (hour of day) over the past year
+ * Returns array of 24 counts, one per hour (0-23)
+ */
+export async function fetchTimeDistribution(login) {
+  // Fetch commits from recent active repos
+  const { user } = await client(`
+    query($login: String!) {
+      user(login: $login) {
+        repositories(first: 20, ownerAffiliations: OWNER, orderBy: {field: PUSHED_AT, direction: DESC}, isFork: false) {
+          nodes {
+            name
+            defaultBranchRef {
+              target {
+                ... on Commit {
+                  history(first: 100) {
+                    nodes {
+                      committedDate
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `, { login });
+
+  const hours = new Array(24).fill(0);
+
+  for (const repo of user.repositories.nodes) {
+    const commits = repo.defaultBranchRef?.target?.history?.nodes || [];
+    for (const commit of commits) {
+      const date = new Date(commit.committedDate);
+      hours[date.getUTCHours()]++;
+    }
+  }
+
+  return hours;
+}

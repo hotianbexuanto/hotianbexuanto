@@ -1,16 +1,16 @@
-import { colors, shape, spacing, cardWidth } from './tokens.mjs';
+import { colors, shape, spacing, cardWidth, fontFamily } from './tokens.mjs';
 
 /**
- * Render Recent Activity Card - 390 x 180 (light fresh style)
- * Shows recent commits/PRs/issues
+ * Render Recent Activity Card - quarter width (194 x 260)
+ * Shows recent commits/PRs/issues in compact form
  */
-export function renderActivity(activities) {
+export function renderActivity(activities, buildTime) {
   const items = (activities || []).slice(0, 4);
 
   const typeIcons = {
-    commit: { color: '#1A7F37', label: 'Commit' },
-    pr: { color: '#B186D6', label: 'PR' },
-    issue: { color: '#CF222E', label: 'Issue' },
+    commit: { color: '#1A7F37', label: 'C' },
+    pr: { color: '#B186D6', label: 'P' },
+    issue: { color: '#CF222E', label: 'I' },
   };
 
   const rows = items.length > 0 ? items.map(item => {
@@ -21,11 +21,11 @@ export function renderActivity(activities) {
         style: {
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '5px',
           width: '100%',
         },
         children: [
-          // Type badge
+          // Type badge (compact single letter)
           {
             type: 'div',
             props: {
@@ -33,12 +33,12 @@ export function renderActivity(activities) {
                 display: 'flex',
                 backgroundColor: `${info.color}18`,
                 color: info.color,
-                borderRadius: `${shape.cornerMd}px`,
-                padding: '2px 6px',
-                fontSize: '10px',
+                borderRadius: `${shape.cornerSm}px`,
+                padding: '1px 4px',
+                fontSize: '9px',
                 fontWeight: 600,
                 flexShrink: 0,
-                width: '50px',
+                width: '16px',
                 justifyContent: 'center',
               },
               children: info.label,
@@ -49,7 +49,7 @@ export function renderActivity(activities) {
             type: 'span',
             props: {
               style: {
-                fontSize: '12px',
+                fontSize: '10px',
                 color: colors.onSurface,
                 flex: 1,
                 overflow: 'hidden',
@@ -59,18 +59,6 @@ export function renderActivity(activities) {
               children: item.message || '...',
             },
           },
-          // Date
-          {
-            type: 'span',
-            props: {
-              style: {
-                fontSize: '10px',
-                color: colors.onSurfaceMuted,
-                flexShrink: 0,
-              },
-              children: item.date || '',
-            },
-          },
         ],
       },
     };
@@ -78,11 +66,47 @@ export function renderActivity(activities) {
     {
       type: 'span',
       props: {
-        style: { fontSize: '13px', color: colors.onSurfaceMuted, textAlign: 'center' },
+        style: { fontSize: '11px', color: colors.onSurfaceMuted, textAlign: 'center' },
         children: 'No recent activity',
       },
     },
   ];
+
+  const children = [
+    // Title
+    {
+      type: 'span',
+      props: {
+        style: { fontSize: '12px', fontWeight: 600, color: colors.onSurfaceVariant, marginBottom: '8px' },
+        children: 'Activity',
+      },
+    },
+    // Activity items
+    {
+      type: 'div',
+      props: {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          flex: 1,
+          justifyContent: items.length === 0 ? 'center' : 'flex-start',
+          alignItems: items.length === 0 ? 'center' : 'stretch',
+        },
+        children: rows,
+      },
+    },
+  ];
+
+  if (buildTime) {
+    children.push({
+      type: 'span',
+      props: {
+        style: { fontSize: '8px', color: colors.onSurfaceMuted, textAlign: 'right', marginTop: '4px' },
+        children: `Updated: ${buildTime}`,
+      },
+    });
+  }
 
   return {
     type: 'div',
@@ -90,40 +114,16 @@ export function renderActivity(activities) {
       style: {
         display: 'flex',
         flexDirection: 'column',
-        width: `${cardWidth.half}px`,
+        width: `${cardWidth.quarter}px`,
         height: '260px',
         backgroundColor: colors.surfaceContainer,
         border: `1px solid ${colors.surfaceBorder}`,
         borderRadius: `${shape.cornerXl}px`,
-        padding: `${spacing.lg}px`,
-        fontFamily: 'Inter, sans-serif',
+        padding: `${spacing.md}px`,
+        fontFamily,
         color: colors.onSurface,
       },
-      children: [
-        // Title
-        {
-          type: 'span',
-          props: {
-            style: { fontSize: '14px', fontWeight: 600, color: colors.onSurfaceVariant, marginBottom: '10px' },
-            children: 'Recent Activity',
-          },
-        },
-        // Activity items
-        {
-          type: 'div',
-          props: {
-            style: {
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              flex: 1,
-              justifyContent: items.length === 0 ? 'center' : 'flex-start',
-              alignItems: items.length === 0 ? 'center' : 'stretch',
-            },
-            children: rows,
-          },
-        },
-      ],
+      children,
     },
   };
 }

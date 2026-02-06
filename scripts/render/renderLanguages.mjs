@@ -1,17 +1,17 @@
-import { colors, shape, spacing, cardWidth } from './tokens.mjs';
+import { colors, shape, spacing, cardWidth, fontFamily } from './tokens.mjs';
 
 /**
- * Render Top Languages Card - 800 x 260 (light fresh style)
- * Shows more languages with color dots and byte count
+ * Render Top Languages Card - quarter width (194 x 260)
+ * Compact list with color dots and percentages
  */
-export function renderLanguages(languages) {
-  const rows = languages.map(lang => ({
+export function renderLanguages(languages, buildTime) {
+  const rows = languages.slice(0, 6).map(lang => ({
     type: 'div',
     props: {
       style: {
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
+        gap: '6px',
         width: '100%',
       },
       children: [
@@ -20,8 +20,8 @@ export function renderLanguages(languages) {
           type: 'div',
           props: {
             style: {
-              width: '10px',
-              height: '10px',
+              width: '8px',
+              height: '8px',
               borderRadius: '50%',
               backgroundColor: lang.color || colors.primary,
               flexShrink: 0,
@@ -34,11 +34,10 @@ export function renderLanguages(languages) {
           type: 'span',
           props: {
             style: {
-              width: '90px',
-              fontSize: '14px',
+              fontSize: '11px',
               fontWeight: 500,
               color: colors.onSurface,
-              flexShrink: 0,
+              flex: 1,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -46,17 +45,18 @@ export function renderLanguages(languages) {
             children: lang.name,
           },
         },
-        // Progress bar track
+        // Progress bar
         {
           type: 'div',
           props: {
             style: {
               display: 'flex',
-              flex: 1,
-              height: '6px',
+              width: '40px',
+              height: '4px',
               backgroundColor: colors.surfaceContainerHigh,
               borderRadius: `${shape.cornerFull}px`,
               overflow: 'hidden',
+              flexShrink: 0,
             },
             children: {
               type: 'div',
@@ -77,11 +77,10 @@ export function renderLanguages(languages) {
           type: 'span',
           props: {
             style: {
-              width: '45px',
+              width: '32px',
               textAlign: 'right',
-              fontSize: '12px',
+              fontSize: '10px',
               color: colors.onSurfaceMuted,
-              fontFamily: 'monospace',
               flexShrink: 0,
             },
             children: `${lang.percent}%`,
@@ -91,49 +90,61 @@ export function renderLanguages(languages) {
     },
   }));
 
+  const children = [
+    // Header
+    {
+      type: 'span',
+      props: {
+        style: {
+          fontSize: '12px',
+          fontWeight: 600,
+          color: colors.onSurfaceVariant,
+          marginBottom: '10px',
+        },
+        children: 'Languages',
+      },
+    },
+    // Language rows
+    {
+      type: 'div',
+      props: {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          flex: 1,
+        },
+        children: rows,
+      },
+    },
+  ];
+
+  if (buildTime) {
+    children.push({
+      type: 'span',
+      props: {
+        style: { fontSize: '8px', color: colors.onSurfaceMuted, textAlign: 'right', marginTop: '4px' },
+        children: `Updated: ${buildTime}`,
+      },
+    });
+  }
+
   return {
     type: 'div',
     props: {
       style: {
         display: 'flex',
         flexDirection: 'column',
-        width: `${cardWidth.half}px`,
+        width: `${cardWidth.quarter}px`,
         height: '260px',
         backgroundColor: colors.surfaceContainer,
         border: `1px solid ${colors.surfaceBorder}`,
         borderRadius: `${shape.cornerXl}px`,
-        padding: `${spacing.lg}px`,
-        fontFamily: 'Inter, sans-serif',
+        padding: `${spacing.md}px`,
+        fontFamily,
         color: colors.onSurface,
       },
-      children: [
-        // Header
-        {
-          type: 'span',
-          props: {
-            style: {
-              fontSize: '14px',
-              fontWeight: 600,
-              color: colors.onSurfaceVariant,
-              marginBottom: '14px',
-            },
-            children: 'Most Used Languages',
-          },
-        },
-        // Language rows
-        {
-          type: 'div',
-          props: {
-            style: {
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              flex: 1,
-            },
-            children: rows,
-          },
-        },
-      ],
+      children,
     },
   };
 }

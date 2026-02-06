@@ -1,53 +1,83 @@
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import satori from 'satori';
-import { fetchUserStats, fetchLanguages, fetchContributions, fetchRecentActivity } from './api/graphql.mjs';
+import { fetchUserStats, fetchLanguages, fetchContributions, fetchRecentActivity, fetchTimeDistribution } from './api/graphql.mjs';
 import { renderStats } from './render/renderStats.mjs';
 import { renderLanguages } from './render/renderLanguages.mjs';
 import { renderStreak } from './render/renderStreak.mjs';
 import { renderContributions } from './render/renderContributions.mjs';
 import { renderActivity } from './render/renderActivity.mjs';
+import { renderTimeDistribution } from './render/renderTimeDistribution.mjs';
 
 const username = process.env.GH_USERNAME || 'hotianbexuanto';
 const assetsDir = process.env.ASSETS_DIR || 'assets/generated';
 
 // Load font (Satori requires TTF/OTF/woff, NOT woff2)
 async function loadFont() {
-  const regularPath = join('assets', 'fonts', 'Inter-Regular.otf');
-  const boldPath = join('assets', 'fonts', 'Inter-Bold.otf');
+  const regularPath = join('assets', 'fonts', 'MapleMono-NF-CN-Regular.ttf');
+  const boldPath = join('assets', 'fonts', 'MapleMono-NF-CN-Bold.ttf');
 
   try {
     const fontData = await readFile(regularPath);
     const fontBoldData = await readFile(boldPath);
     return [
-      { name: 'Inter', data: fontData, weight: 400, style: 'normal' },
-      { name: 'Inter', data: fontBoldData, weight: 700, style: 'normal' },
+      { name: 'Maple Mono NF CN', data: fontData, weight: 400, style: 'normal' },
+      { name: 'Maple Mono NF CN', data: fontBoldData, weight: 700, style: 'normal' },
     ];
   } catch {
-    // Download from Google Fonts CSS2 API (requesting woff format via user-agent trick)
-    console.log('Local fonts not found, downloading Inter...');
+    // Download Maple Mono NF CN
+    console.log('Local fonts not found, downloading Maple Mono NF CN...');
 
-    // Use fontsource CDN which provides direct woff files
-    const regularUrl = 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff';
-    const boldUrl = 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff';
+    let regular, bold;
 
-    const regularRes = await fetch(regularUrl);
-    const boldRes = await fetch(boldUrl);
+    // Strategy 1: Try fontsource CDN (woff format, Satori compatible)
+    try {
+      const regularUrl = 'https://cdn.jsdelivr.net/fontsource/fonts/maple-mono-nf-cn@latest/chinese-simplified-400-normal.woff';
+      const boldUrl = 'https://cdn.jsdelivr.net/fontsource/fonts/maple-mono-nf-cn@latest/chinese-simplified-700-normal.woff';
+      const [regularRes, boldRes] = await Promise.all([fetch(regularUrl), fetch(boldUrl)]);
+      if (regularRes.ok && boldRes.ok) {
+        regular = Buffer.from(await regularRes.arrayBuffer());
+        bold = Buffer.from(await boldRes.arrayBuffer());
+        console.log('Downloaded from fontsource CDN.');
+      } else {
+        throw new Error('fontsource CDN not available');
+      }
+    } catch {
+      // Strategy 2: Download zip from GitHub releases and extract TTFs
+      console.log('fontsource CDN failed, trying GitHub releases zip...');
+      const { default: AdmZip } = await import('adm-zip');
+      const zipUrl = 'https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-NF-CN.zip';
+      const res = await fetch(zipUrl);
+      if (!res.ok) {
+        throw new Error(`Font zip download failed: ${res.status}`);
+      }
+      const zipBuffer = Buffer.from(await res.arrayBuffer());
+      const zip = new AdmZip(zipBuffer);
+      const entries = zip.getEntries();
 
-    if (!regularRes.ok || !boldRes.ok) {
-      throw new Error(`Font download failed: regular=${regularRes.status} bold=${boldRes.status}`);
+      let regularEntry, boldEntry;
+      for (const entry of entries) {
+        const name = entry.entryName.toLowerCase();
+        if (name.includes('regular') && name.endsWith('.ttf')) regularEntry = entry;
+        if (name.includes('bold') && !name.includes('semi') && !name.includes('extra') && name.endsWith('.ttf')) boldEntry = entry;
+      }
+
+      if (!regularEntry || !boldEntry) {
+        throw new Error('Could not find Regular/Bold TTF files in zip. Entries: ' + entries.map(e => e.entryName).join(', '));
+      }
+
+      regular = regularEntry.getData();
+      bold = boldEntry.getData();
+      console.log('Extracted from GitHub releases zip.');
     }
 
-    const regular = Buffer.from(await regularRes.arrayBuffer());
-    const bold = Buffer.from(await boldRes.arrayBuffer());
-
     await mkdir(join('assets', 'fonts'), { recursive: true });
-    await writeFile(join('assets', 'fonts', 'Inter-Regular.woff'), regular);
-    await writeFile(join('assets', 'fonts', 'Inter-Bold.woff'), bold);
+    await writeFile(join('assets', 'fonts', 'MapleMono-NF-CN-Regular.ttf'), regular);
+    await writeFile(join('assets', 'fonts', 'MapleMono-NF-CN-Bold.ttf'), bold);
 
     return [
-      { name: 'Inter', data: regular, weight: 400, style: 'normal' },
-      { name: 'Inter', data: bold, weight: 700, style: 'normal' },
+      { name: 'Maple Mono NF CN', data: regular, weight: 400, style: 'normal' },
+      { name: 'Maple Mono NF CN', data: bold, weight: 700, style: 'normal' },
     ];
   }
 }
@@ -66,15 +96,19 @@ async function main() {
   // Load fonts
   const fonts = await loadFont();
 
+  // Build timestamp
+  const buildTime = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+
   // Fetch data (with error handling)
-  let stats, languages, contributions, activity;
+  let stats, languages, contributions, activity, timeDistribution;
   try {
     console.log('Fetching GitHub data...');
-    [stats, languages, contributions, activity] = await Promise.all([
+    [stats, languages, contributions, activity, timeDistribution] = await Promise.all([
       fetchUserStats(username),
       fetchLanguages(username),
       fetchContributions(username),
       fetchRecentActivity(username),
+      fetchTimeDistribution(username),
     ]);
     console.log('Data fetched successfully.');
   } catch (err) {
@@ -103,6 +137,7 @@ async function main() {
       last30Days: new Array(30).fill(0),
     };
     activity = [];
+    timeDistribution = new Array(24).fill(0);
   }
 
   stats.login = username;
@@ -110,13 +145,17 @@ async function main() {
   // Create output directory
   await mkdir(assetsDir, { recursive: true });
 
-  // Render all cards (paired layout)
+  // Render all cards
+  // Row 1: 4 quarter-width cards (194 x 260)
+  // Row 2: Time Distribution (390 x 260)
+  // Row 3: Contribution Graph (800 x 220)
   const cards = [
-    { name: 'stats.svg', element: renderStats(stats), width: 390, height: 260 },
-    { name: 'languages.svg', element: renderLanguages(languages), width: 390, height: 260 },
-    { name: 'streak.svg', element: renderStreak(contributions), width: 390, height: 260 },
-    { name: 'activity.svg', element: renderActivity(activity), width: 390, height: 260 },
-    { name: 'contributions.svg', element: renderContributions(contributions), width: 800, height: 220 },
+    { name: 'stats.svg', element: renderStats(stats, buildTime), width: 194, height: 260 },
+    { name: 'languages.svg', element: renderLanguages(languages, buildTime), width: 194, height: 260 },
+    { name: 'streak.svg', element: renderStreak(contributions, buildTime), width: 194, height: 260 },
+    { name: 'activity.svg', element: renderActivity(activity, buildTime), width: 194, height: 260 },
+    { name: 'timedist.svg', element: renderTimeDistribution(timeDistribution, buildTime), width: 390, height: 260 },
+    { name: 'contributions.svg', element: renderContributions(contributions, buildTime), width: 800, height: 220 },
   ];
 
   for (const card of cards) {

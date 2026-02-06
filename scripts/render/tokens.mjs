@@ -45,4 +45,7 @@ export const typography = {
 export const cardWidth = {
   full: 800,
   half: 390,
+  quarter: 194,
 };
+
+export const fontFamily = 'Maple Mono NF CN, monospace';

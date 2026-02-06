@@ -1,10 +1,10 @@
-import { colors, shape, spacing, cardWidth } from './tokens.mjs';
+import { colors, shape, spacing, cardWidth, fontFamily } from './tokens.mjs';
 
 /**
- * Render Contribution Graph Card - 800 x 220 (light fresh style)
+ * Render Contribution Graph Card - 800 x 220
  * Smooth Bezier area chart with subtle grid
  */
-export function renderContributions(data) {
+export function renderContributions(data, buildTime) {
   const points = data.last30Days;
   const maxVal = Math.max(...points, 1);
   const chartW = 700;
@@ -33,6 +33,122 @@ export function renderContributions(data) {
 
   const totalContributions = points.reduce((s, v) => s + v, 0);
 
+  const children = [
+    // Header
+    {
+      type: 'div',
+      props: {
+        style: {
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '4px',
+        },
+        children: [
+          {
+            type: 'span',
+            props: {
+              style: { fontSize: '14px', fontWeight: 600, color: colors.onSurfaceVariant },
+              children: 'Contribution Activity (30 Days)',
+            },
+          },
+          {
+            type: 'div',
+            props: {
+              style: {
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'center',
+              },
+              children: [
+                {
+                  type: 'div',
+                  props: {
+                    style: {
+                      display: 'flex',
+                      backgroundColor: colors.primaryContainer,
+                      color: colors.primary,
+                      borderRadius: `${shape.cornerFull}px`,
+                      padding: '3px 10px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                    },
+                    children: `${totalContributions} contributions`,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    // Chart SVG
+    {
+      type: 'svg',
+      props: {
+        width: cardWidth.full - spacing.lg * 2,
+        height: chartH + 20,
+        viewBox: `0 0 ${cardWidth.full - spacing.lg * 2} ${chartH + padTop - 20}`,
+        children: [
+          // Subtle grid lines
+          ...[0, 0.5, 1].map(frac => ({
+            type: 'line',
+            props: {
+              x1: padLeft,
+              y1: padTop + chartH * (1 - frac),
+              x2: padLeft + chartW,
+              y2: padTop + chartH * (1 - frac),
+              stroke: colors.surfaceContainerHigh,
+              strokeWidth: 1,
+              strokeDasharray: '4,4',
+            },
+          })),
+          // Area fill
+          {
+            type: 'path',
+            props: {
+              d: areaPath,
+              fill: colors.primaryContainer,
+            },
+          },
+          // Line
+          {
+            type: 'path',
+            props: {
+              d: linePath,
+              fill: 'none',
+              stroke: colors.primary,
+              strokeWidth: 2.5,
+              strokeLinecap: 'round',
+            },
+          },
+          // Dots at every 5th data point
+          ...coords.filter((_, i) => i % 5 === 0).map(c => ({
+            type: 'circle',
+            props: {
+              cx: c.x,
+              cy: c.y,
+              r: 3,
+              fill: colors.surfaceContainer,
+              stroke: colors.primary,
+              strokeWidth: 2,
+            },
+          })),
+        ],
+      },
+    },
+  ];
+
+  if (buildTime) {
+    children.push({
+      type: 'span',
+      props: {
+        style: { fontSize: '9px', color: colors.onSurfaceMuted, textAlign: 'right', marginTop: '2px' },
+        children: `Updated: ${buildTime}`,
+      },
+    });
+  }
+
   return {
     type: 'div',
     props: {
@@ -45,102 +161,10 @@ export function renderContributions(data) {
         border: `1px solid ${colors.surfaceBorder}`,
         borderRadius: `${shape.cornerXl}px`,
         padding: `${spacing.lg}px`,
-        fontFamily: 'Inter, sans-serif',
+        fontFamily,
         color: colors.onSurface,
       },
-      children: [
-        // Header
-        {
-          type: 'div',
-          props: {
-            style: {
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '4px',
-            },
-            children: [
-              {
-                type: 'span',
-                props: {
-                  style: { fontSize: '14px', fontWeight: 600, color: colors.onSurfaceVariant },
-                  children: 'Contribution Activity (30 Days)',
-                },
-              },
-              {
-                type: 'div',
-                props: {
-                  style: {
-                    display: 'flex',
-                    backgroundColor: colors.primaryContainer,
-                    color: colors.primary,
-                    borderRadius: `${shape.cornerFull}px`,
-                    padding: '3px 10px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                  },
-                  children: `${totalContributions} contributions`,
-                },
-              },
-            ],
-          },
-        },
-        // Chart SVG
-        {
-          type: 'svg',
-          props: {
-            width: cardWidth.full - spacing.lg * 2,
-            height: chartH + 20,
-            viewBox: `0 0 ${cardWidth.full - spacing.lg * 2} ${chartH + padTop - 20}`,
-            children: [
-              // Subtle grid lines
-              ...[0, 0.5, 1].map(frac => ({
-                type: 'line',
-                props: {
-                  x1: padLeft,
-                  y1: padTop + chartH * (1 - frac),
-                  x2: padLeft + chartW,
-                  y2: padTop + chartH * (1 - frac),
-                  stroke: colors.surfaceContainerHigh,
-                  strokeWidth: 1,
-                  strokeDasharray: '4,4',
-                },
-              })),
-              // Area fill with gradient effect (light purple)
-              {
-                type: 'path',
-                props: {
-                  d: areaPath,
-                  fill: colors.primaryContainer,
-                },
-              },
-              // Line
-              {
-                type: 'path',
-                props: {
-                  d: linePath,
-                  fill: 'none',
-                  stroke: colors.primary,
-                  strokeWidth: 2.5,
-                  strokeLinecap: 'round',
-                },
-              },
-              // Dots at every 5th data point
-              ...coords.filter((_, i) => i % 5 === 0).map(c => ({
-                type: 'circle',
-                props: {
-                  cx: c.x,
-                  cy: c.y,
-                  r: 3,
-                  fill: colors.surfaceContainer,
-                  stroke: colors.primary,
-                  strokeWidth: 2,
-                },
-              })),
-            ],
-          },
-        },
-      ],
+      children,
     },
   };
 }
