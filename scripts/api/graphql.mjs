@@ -162,6 +162,10 @@ export async function fetchContributions(login) {
   // Last 30 days for graph
   const last30 = days.slice(-30).map(d => d.contributionCount);
   const last30Dates = days.slice(-30).map(d => d.date);
+  // Previous 30 days (days -60 to -31) for comparison
+  const prev30 = days.length >= 60
+    ? days.slice(-60, -30).map(d => d.contributionCount)
+    : new Array(30).fill(0);
 
   return {
     currentStreak,
@@ -169,6 +173,7 @@ export async function fetchContributions(login) {
     totalContributions: days.reduce((s, d) => s + d.contributionCount, 0),
     last30Days: last30,
     last30Dates,
+    prev30Days: prev30,
   };
 }
 

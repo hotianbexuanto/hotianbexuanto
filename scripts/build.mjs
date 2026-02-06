@@ -137,6 +137,7 @@ async function main() {
       longestStreak: 0,
       totalContributions: 0,
       last30Days: new Array(30).fill(0),
+      prev30Days: new Array(30).fill(0),
       last30Dates: new Array(30).fill(0).map((_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - 29 + i);
