@@ -1,0 +1,250 @@
+import { graphql } from '@octokit/graphql';
+
+const token = process.env.GH_READ_TOKEN || process.env.GITHUB_TOKEN;
+
+const client = graphql.defaults({
+  headers: {
+    ...(token ? { authorization: `token ${token}` } : {}),
+  },
+});
+
+/**
+ * Fetch user profile stats
+ */
+export async function fetchUserStats(login) {
+  const { user } = await client(`
+    query($login: String!) {
+      user(login: $login) {
+        name
+        bio
+        avatarUrl
+        followers { totalCount }
+        repositories(ownerAffiliations: OWNER, privacy: PUBLIC) {
+          totalCount
+        }
+        contributionsCollection {
+          totalCommitContributions
+          totalPullRequestContributions
+          totalIssueContributions
+          contributionCalendar {
+            totalContributions
+          }
+        }
+        repositoriesContributedTo(first: 1) {
+          totalCount
+        }
+      }
+    }
+  `, { login });
+
+  // Calculate total stars
+  const { user: starUser } = await client(`
+    query($login: String!) {
+      user(login: $login) {
+        repositories(first: 100, ownerAffiliations: OWNER, orderBy: {field: STARGAZERS, direction: DESC}) {
+          nodes { stargazerCount }
+        }
+      }
+    }
+  `, { login });
+
+  const totalStars = starUser.repositories.nodes.reduce((sum, r) => sum + r.stargazerCount, 0);
+
+  return {
+    name: user.name || login,
+    bio: user.bio || '',
+    avatarUrl: user.avatarUrl,
+    followers: user.followers.totalCount,
+    repos: user.repositories.totalCount,
+    totalStars,
+    totalCommits: user.contributionsCollection.totalCommitContributions,
+    totalPRs: user.contributionsCollection.totalPullRequestContributions,
+    totalIssues: user.contributionsCollection.totalIssueContributions,
+    totalContributions: user.contributionsCollection.contributionCalendar.totalContributions,
+  };
+}
+
+/**
+ * Fetch top languages across repos
+ */
+export async function fetchLanguages(login) {
+  const { user } = await client(`
+    query($login: String!) {
+      user(login: $login) {
+        repositories(first: 100, ownerAffiliations: OWNER, isFork: false, privacy: PUBLIC) {
+          nodes {
+            languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
+              edges {
+                size
+                node { name color }
+              }
+            }
+          }
+        }
+      }
+    }
+  `, { login });
+
+  const langMap = {};
+  for (const repo of user.repositories.nodes) {
+    for (const edge of repo.languages.edges) {
+      const name = edge.node.name;
+      if (!langMap[name]) {
+        langMap[name] = { size: 0, color: edge.node.color || '#B186D6' };
+      }
+      langMap[name].size += edge.size;
+    }
+  }
+
+  // Use total across ALL languages for accurate percentages
+  const allTotal = Object.values(langMap).reduce((sum, v) => sum + v.size, 0);
+
+  const sorted = Object.entries(langMap)
+    .sort((a, b) => b[1].size - a[1].size)
+    .slice(0, 8);
+
+  return sorted.map(([name, { size, color }]) => ({
+    name,
+    percent: Math.round((size / allTotal) * 1000) / 10,
+    color,
+  }));
+}
+
+/**
+ * Fetch contribution calendar for streak and graph
+ */
+export async function fetchContributions(login) {
+  const { user } = await client(`
+    query($login: String!) {
+      user(login: $login) {
+        contributionsCollection {
+          contributionCalendar {
+            weeks {
+              contributionDays {
+                date
+                contributionCount
+              }
+            }
+          }
+        }
+      }
+    }
+  `, { login });
+
+  const days = user.contributionsCollection.contributionCalendar.weeks
+    .flatMap(w => w.contributionDays)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Calculate current streak (walk backwards from today)
+  let currentStreak = 0;
+  for (let i = days.length - 1; i >= 0; i--) {
+    if (days[i].contributionCount > 0) {
+      currentStreak++;
+    } else {
+      // Allow today to be zero (day not over yet) - check yesterday
+      if (i === days.length - 1) continue;
+      break;
+    }
+  }
+
+  // Calculate longest streak
+  let longestStreak = 0;
+  let tempStreak = 0;
+  for (const day of days) {
+    if (day.contributionCount > 0) {
+      tempStreak++;
+      longestStreak = Math.max(longestStreak, tempStreak);
+    } else {
+      tempStreak = 0;
+    }
+  }
+
+  // Last 30 days for graph
+  const last30 = days.slice(-30).map(d => d.contributionCount);
+
+  return {
+    currentStreak,
+    longestStreak,
+    totalContributions: days.reduce((s, d) => s + d.contributionCount, 0),
+    last30Days: last30,
+  };
+}
+
+/**
+ * Fetch recent activity (commits, PRs, issues)
+ */
+export async function fetchRecentActivity(login) {
+  const { user } = await client(`
+    query($login: String!) {
+      user(login: $login) {
+        repositories(first: 5, ownerAffiliations: OWNER, orderBy: {field: PUSHED_AT, direction: DESC}) {
+          nodes {
+            name
+            defaultBranchRef {
+              target {
+                ... on Commit {
+                  history(first: 3) {
+                    nodes {
+                      message
+                      committedDate
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        pullRequests(first: 3, orderBy: {field: CREATED_AT, direction: DESC}) {
+          nodes {
+            title
+            createdAt
+          }
+        }
+        issues(first: 2, orderBy: {field: CREATED_AT, direction: DESC}) {
+          nodes {
+            title
+            createdAt
+          }
+        }
+      }
+    }
+  `, { login });
+
+  const activities = [];
+
+  // Commits
+  for (const repo of user.repositories.nodes) {
+    const history = repo.defaultBranchRef?.target?.history?.nodes || [];
+    for (const commit of history) {
+      activities.push({
+        type: 'commit',
+        message: `${repo.name}: ${commit.message.split('\n')[0]}`,
+        date: new Date(commit.committedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        timestamp: new Date(commit.committedDate).getTime(),
+      });
+    }
+  }
+
+  // PRs
+  for (const pr of user.pullRequests.nodes) {
+    activities.push({
+      type: 'pr',
+      message: pr.title,
+      date: new Date(pr.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      timestamp: new Date(pr.createdAt).getTime(),
+    });
+  }
+
+  // Issues
+  for (const issue of user.issues.nodes) {
+    activities.push({
+      type: 'issue',
+      message: issue.title,
+      date: new Date(issue.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      timestamp: new Date(issue.createdAt).getTime(),
+    });
+  }
+
+  // Sort by most recent and return top 4
+  return activities.sort((a, b) => b.timestamp - a.timestamp).slice(0, 4);
+}

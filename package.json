@@ -1,0 +1,13 @@
+{
+  "name": "hotianbexuanto-readme",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:assets": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@octokit/graphql": "^8.1.1",
+    "satori": "^0.12.0"
+  }
+}
