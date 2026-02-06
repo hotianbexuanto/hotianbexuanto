@@ -252,71 +252,9 @@ export async function fetchRecentActivity(login) {
 }
 
 /**
- * Fetch weekly contribution breakdown (commits, PRs, issues) for line chart
- * Returns 12 weeks of data
+ * Fetch commit time distribution (hour of day) over the past year
+ * Returns array of 24 counts, one per hour (0-23)
  */
-export async function fetchWeeklyStats(login) {
-  const { user } = await client(`
-    query($login: String!) {
-      user(login: $login) {
-        contributionsCollection {
-          commitContributionsByRepository(maxRepositories: 100) {
-            contributions(first: 100, orderBy: {direction: DESC}) {
-              nodes { occurredAt }
-            }
-          }
-          pullRequestContributions(first: 50, orderBy: {direction: DESC}) {
-            nodes { occurredAt }
-          }
-          issueContributions(first: 50, orderBy: {direction: DESC}) {
-            nodes { occurredAt }
-          }
-        }
-      }
-    }
-  `, { login });
-
-  // Build 12-week buckets (most recent 12 weeks)
-  const now = new Date();
-  const weekStarts = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - d.getDay() - i * 7);
-    d.setHours(0, 0, 0, 0);
-    weekStarts.push(d);
-  }
-
-  const commits = new Array(12).fill(0);
-  const prs = new Array(12).fill(0);
-  const issues = new Array(12).fill(0);
-
-  function weekIndex(dateStr) {
-    const t = new Date(dateStr).getTime();
-    for (let i = 11; i >= 0; i--) {
-      if (t >= weekStarts[i].getTime()) return i;
-    }
-    return -1;
-  }
-
-  const cc = user.contributionsCollection;
-  for (const repo of cc.commitContributionsByRepository) {
-    for (const n of repo.contributions.nodes) {
-      const idx = weekIndex(n.occurredAt);
-      if (idx >= 0) commits[idx]++;
-    }
-  }
-  for (const n of cc.pullRequestContributions.nodes) {
-    const idx = weekIndex(n.occurredAt);
-    if (idx >= 0) prs[idx]++;
-  }
-  for (const n of cc.issueContributions.nodes) {
-    const idx = weekIndex(n.occurredAt);
-    if (idx >= 0) issues[idx]++;
-  }
-
-  const labels = weekStarts.map(d => `${d.getMonth() + 1}/${d.getDate()}`);
-  return { commits, prs, issues, labels };
-}
 export async function fetchTimeDistribution(login) {
   // Fetch commits from recent active repos
   const { user } = await client(`

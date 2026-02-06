@@ -1,7 +1,7 @@
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import satori from 'satori';
-import { fetchUserStats, fetchLanguages, fetchContributions, fetchRecentActivity, fetchTimeDistribution, fetchWeeklyStats } from './api/graphql.mjs';
+import { fetchUserStats, fetchLanguages, fetchContributions, fetchRecentActivity, fetchTimeDistribution } from './api/graphql.mjs';
 import { renderStats } from './render/renderStats.mjs';
 import { renderLanguages } from './render/renderLanguages.mjs';
 import { renderStreak } from './render/renderStreak.mjs';
@@ -102,16 +102,15 @@ async function main() {
   const buildTime = beijing.toISOString().replace('T', ' ').slice(0, 16) + ' CST';
 
   // Fetch data (with error handling)
-  let stats, languages, contributions, activity, timeDistribution, weeklyStats;
+  let stats, languages, contributions, activity, timeDistribution;
   try {
     console.log('Fetching GitHub data...');
-    [stats, languages, contributions, activity, timeDistribution, weeklyStats] = await Promise.all([
+    [stats, languages, contributions, activity, timeDistribution] = await Promise.all([
       fetchUserStats(username),
       fetchLanguages(username),
       fetchContributions(username),
       fetchRecentActivity(username),
       fetchTimeDistribution(username),
-      fetchWeeklyStats(username),
     ]);
     console.log('Data fetched successfully.');
   } catch (err) {
@@ -146,15 +145,6 @@ async function main() {
     };
     activity = [];
     timeDistribution = new Array(24).fill(0);
-    weeklyStats = {
-      commits: [3, 5, 2, 8, 4, 6, 7, 3, 9, 5, 4, 6],
-      prs: [0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 1],
-      issues: [1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0],
-      labels: Array.from({ length: 12 }, (_, i) => {
-        const d = new Date(); d.setDate(d.getDate() - (11 - i) * 7);
-        return `${d.getMonth() + 1}/${d.getDate()}`;
-      }),
-    };
   }
 
   stats.login = username;
@@ -167,7 +157,7 @@ async function main() {
   // Row 2: Time Distribution (390 x 260)
   // Row 3: Contribution Graph (800 x 220)
   const cards = [
-    { name: 'stats.svg', element: renderStats(stats, weeklyStats, buildTime), width: 194, height: 260 },
+    { name: 'stats.svg', element: renderStats(stats, buildTime), width: 194, height: 260 },
     { name: 'languages.svg', element: renderLanguages(languages, buildTime), width: 194, height: 260 },
     { name: 'streak.svg', element: renderStreak(contributions, buildTime), width: 194, height: 260 },
     { name: 'activity.svg', element: renderActivity(activity, buildTime), width: 194, height: 260 },
